@@ -1,0 +1,65 @@
+{
+  "name": "twitchapp",
+  "version": "1.0.1",
+  "main": "main.js",
+  "author": "Xerty",
+  "license": "ISC",
+  "scripts": {
+    "start": "set NODE_ENV=development&& electron .",
+    "build": "set NODE_ENV=production&& electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.openfront.app",
+    "asarUnpack": [
+      "mods/discord-rpc.js",
+      "node_modules/discord-rpc"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": "portable",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "extraResources": [
+      {
+        "from": "node_modules/discord-rpc",
+        "to": "node_modules/discord-rpc"
+      },
+      {
+        "from": "mods",
+        "to": "mods",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "active-mods.json",
+        "to": "."
+      }
+    ],
+    "extraFiles": [
+      "active-mods.json"
+    ]
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1",
+    "node-fetch": "^3.3.2"
+  }
+}
