@@ -1,6 +1,7 @@
 {
   "name": "twitchapp",
-  "version": "1.0.2",
+  "version": "1.0.1",
+  "description": "App Twitch custom",
   "main": "main.js",
   "author": "Xerty",
   "license": "ISC",
@@ -23,11 +24,7 @@
     ],
     "win": {
       "icon": "assets/icon.ico",
-      "target": "portable",
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
-      "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+      "target": "portable"
     },
     "mac": {
       "target": "dmg",
