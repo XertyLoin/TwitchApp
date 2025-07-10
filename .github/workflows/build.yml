@@ -1,5 +1,8 @@
 # module du helios launcher
 name: Launcher Build
+
+permissions:
+  contents: write
 on:
   push:
     branches: [ master ]
