@@ -31,7 +31,6 @@ function getAppPath() {
       console.log("Mods de base copiés dans", modsPath);
     }
   }
-
   return appDataDir;
 }
 
@@ -61,10 +60,10 @@ function createWindow() {
   });
 
   win.setTitle("OpenFront App");
-  win.loadURL('https://twitch.tv');
+  win.loadURL('https://www.twitch.tv');
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://twitch.tv')) {
+    if (url.startsWith('https://www.twitch.tv')) {
       return { action: 'allow' };
     }
     shell.openExternal(url);
@@ -72,25 +71,10 @@ function createWindow() {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('https://twitch.tv')) {
+    if (!url.startsWith('https://www.twitch.tv')) {
       event.preventDefault();
       shell.openExternal(url);
     }
-  });
-
-  win.webContents.on('did-finish-load', () => {
-    win.webContents.executeJavaScript(`
-      const origFetch = window.fetch;
-      window.fetch = function(url, options) {
-        if (typeof url === 'string' && url.includes('/gql')) {
-          if (options && options.body && options.body.includes('PlaybackAccessToken_Ads')) {
-            console.log('🔁 PlaybackAccessToken_Ads bloqué');
-            return Promise.reject('Ad request blocked');
-          }
-        }
-        return origFetch.apply(this, arguments);
-      };
-    `).catch(err => console.error("Erreur d'injection JS:", err));
   });
 
   ipcMain.on('open-devtools', () => {
@@ -138,12 +122,7 @@ function updateDiscordPresence(url) {
       largeImageKey: 'twitch',
       largeImageText: 'Twitch',
       instance: false,
-      buttons: [
-        {
-          label: 'Regarder le stream',
-          url: url
-        }
-      ]
+      buttons: [{ label: 'Regarder le stream', url: url }]
     });
   } else {
     console.log('🔘 Présence Discord : Menu Twitch');
@@ -162,7 +141,16 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const url = details.url;
     const adDomains = [
-      'doubleclick.net', 'googlesyndication.com', 'ads.twitch.tv'
+      'doubleclick.net',
+      'googlesyndication.com',
+      'ads.twitch.tv',
+      'pubads.g.doubleclick.net',
+      'securepubads.g.doubleclick.net',
+      'tpc.googlesyndication.com',
+      'video-ad-status.twitch.tv',
+      'amazon-adsystem.com',
+      'scorecardresearch.com',
+      'adnxs.com'
     ];
 
     if (adDomains.some(domain => url.includes(domain))) {
@@ -206,5 +194,3 @@ app.on('activate', () => {
     mainWindow = createWindow();
   }
 });
-
-//salut
