@@ -41,14 +41,7 @@
       {
         "from": "node_modules/discord-rpc",
         "to": "node_modules/discord-rpc"
-      },
-      {
-        "from": "mods",
-        "to": "mods",
-        "filter": [
-          "**/*"
-        ]
-      },
+      }
     ]
   },
   "dependencies": {
