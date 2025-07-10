@@ -1,0 +1,27 @@
+name: Create Tag from Commit
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get commit message
+        id: get_message
+        run: |
+          echo "message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Create tag if message starts with v
+        if: startsWith(steps.get_message.outputs.message, 'v')
+        run: |
+          version=${{ steps.get_message.outputs.message }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $version
+          git push origin $version
