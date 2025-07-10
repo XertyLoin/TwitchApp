@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'  # Déclenche également sur les tags pour les releases
 
 jobs:
-  create-tag-and-release:
+  create-tag:
     runs-on: ubuntu-latest
     outputs:
       TAG_EXISTS: ${{ steps.check_tag.outputs.TAG_EXISTS }}
@@ -15,19 +17,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Nécessaire pour récupérer l'historique des tags
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.12.0'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Get package.json version
         id: get_version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
         shell: bash
+
       - name: Check if tag exists
         id: check_tag
         run: |
@@ -40,6 +46,7 @@ jobs:
             echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
+
       - name: Create and push tag
         if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         run: |
@@ -50,41 +57,42 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-release:
-    needs: create-tag-and-release
-    if: needs.create-tag-and-release.outputs.TAG_EXISTS != 'true'
+    needs: create-tag
+    if: needs.create-tag.outputs.TAG_EXISTS != 'true'  # S'exécute si un nouveau tag a été créé
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.12.0'
+
       - name: Install dependencies
         run: npm ci
-      - name: Build Electron App
-        run: npm run build
-      - name: List build artifacts
+
+      - name: Install Wine (for Linux builds on Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            dir dist\
-          else
-            ls -la dist/
-          fi
-        shell: bash
-      - name: Create GitHub release and upload assets
-        uses: softprops/action-gh-release@v2
+          sudo dpkg --add-architecture i386
+          sudo apt update
+          sudo apt install -y wine-stable
+
+      - name: Build/release Electron app
+        uses: samuelmeuli/action-electron-builder@v1
         with:
-          tag_name: ${{ needs.create-tag-and-release.outputs.VERSION }}
-          name: Release ${{ needs.create-tag-and-release.outputs.VERSION }}
-          draft: false
-          prerelease: false
-          files: |
-            ${{ matrix.os == 'windows-latest' && 'dist/*.exe' || '' }}
-            ${{ matrix.os == 'ubuntu-latest' && 'dist/*.AppImage' || '' }}
-            ${{ matrix.os == 'macos-latest' && 'dist/*.dmg' || '' }}
+          github_token: ${{ secrets.github_token }}
+          release: ${{ needs.create-tag.outputs.TAG_EXISTS != 'true' }}
+          build_script_name: build
+          mac_certs: ${{ secrets.mac_certs }}  # À configurer si vous avez des certificats
+          mac_certs_password: ${{ secrets.mac_certs_password }}  # À configurer si nécessaire
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Ajoutez ces variables si vous avez des certificats pour macOS/Windows
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          # windows_certs: ${{ secrets.windows_certs }}
+          # windows_certs_password: ${{ secrets.windows_certs_password }}
