@@ -13,8 +13,8 @@
     "build:linux": "cross-env NODE_ENV=production electron-builder --linux"
   },
   "devDependencies": {
-    "electron": "^31.3.2",
-    "electron-builder": "^25.0.5",
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8",
     "cross-env": "^7.0.3"
   },
   "build": {
