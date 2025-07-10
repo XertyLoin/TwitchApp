@@ -1,4 +1,3 @@
-# module du helios launcher
 name: Launcher Build
 
 permissions:
@@ -11,23 +10,26 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Get version
-        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
-      
+        id: get_version
+        run: echo "::set-output name=version::$(jq -r .version package.json)"
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.version }}
-          release_name: release ${{ env.version }}
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: release ${{ steps.get_version.outputs.version }}
           draft: false
-          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') }}
 
   build-launcher:
     needs: create-release
