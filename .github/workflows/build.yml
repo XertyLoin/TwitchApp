@@ -2,97 +2,57 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'  # Déclenche également sur les tags pour les releases
+    branches: [ master ]
 
 jobs:
-  create-tag:
+  create-release:
     runs-on: ubuntu-latest
-    outputs:
-      TAG_EXISTS: ${{ steps.check_tag.outputs.TAG_EXISTS }}
-      VERSION: ${{ steps.get_version.outputs.VERSION }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Nécessaire pour récupérer l'historique des tags
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.12.0'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Get package.json version
-        id: get_version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Check if tag exists
-        id: check_tag
-        run: |
-          TAG=${{ steps.get_version.outputs.VERSION }}
-          if git tag | grep -q "^$TAG$"; then
-            echo "Tag $TAG already exists, skipping tag creation."
-            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
-          else
-            echo "Tag $TAG does not exist, proceeding with tag creation."
-            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
-
-      - name: Create and push tag
-        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
-        run: |
-          TAG=${{ steps.get_version.outputs.VERSION }}
-          git tag $TAG
-          git push origin $TAG
+      - name: Get version
+        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.version }}
+          release_name: release ${{ env.version }}
+          draft: false
+          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
 
-  build-and-release:
-    needs: create-tag
-    if: needs.create-tag.outputs.TAG_EXISTS != 'true'  # S'exécute si un nouveau tag a été créé
+  build-launcher:
+    needs: create-release
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [macos-14, ubuntu-latest, windows-latest]
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out Git repository
+        uses: actions/checkout@v1
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node
+        uses: actions/setup-node@v3
         with:
-          node-version: '22.12.0'
+          node-version: 18.x
 
-      - name: Install dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install Dependencies
         run: npm ci
+        shell: bash
 
-      - name: Install Wine (for Linux builds on Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt update
-          sudo apt install -y wine-stable
-
-      - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.github_token }}
-          release: ${{ needs.create-tag.outputs.TAG_EXISTS != 'true' }}
-          build_script_name: build
-          mac_certs: ${{ secrets.mac_certs }}  # À configurer si vous avez des certificats
-          mac_certs_password: ${{ secrets.mac_certs_password }}  # À configurer si nécessaire
+      - name: Build
         env:
-          # Ajoutez ces variables si vous avez des certificats pour macOS/Windows
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          # windows_certs: ${{ secrets.windows_certs }}
-          # windows_certs_password: ${{ secrets.windows_certs_password }}
+          GH_TOKEN: ${{ secrets.github_token }}
+        run: npm run build
+        shell: bash
