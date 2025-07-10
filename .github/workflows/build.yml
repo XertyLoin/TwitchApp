@@ -70,6 +70,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github_token }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ matrix.os == 'macos-14' && format('dist/TwitchApp-{0}-mac.dmg', env.VERSION) || matrix.os == 'ubuntu-latest' && format('dist/TwitchApp-{0}.AppImage', env.VERSION) || matrix.os == 'windows-latest' && format('dist/TwitchApp-{0}-win-portable.zip', env.VERSION) }}
+          asset_path: ${{ matrix.os == 'macos-14' && format('dist/TwitchApp-{0}-arm64.dmg', env.VERSION) || matrix.os == 'ubuntu-latest' && format('dist/TwitchApp-{0}.AppImage', env.VERSION) || matrix.os == 'windows-latest' && format('dist/TwitchApp-{0}-win-portable.zip', env.VERSION) }}
           asset_name: ${{ matrix.os == 'macos-14' && format('TwitchApp-{0}-mac.dmg', env.VERSION) || matrix.os == 'ubuntu-latest' && format('TwitchApp-{0}.AppImage', env.VERSION) || matrix.os == 'windows-latest' && format('TwitchApp-{0}-win-portable.zip', env.VERSION) }}
           asset_content_type: application/octet-stream
