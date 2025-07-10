@@ -9,19 +9,19 @@ jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Get commit message
-        id: get_message
-        run: |
-          echo "message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+        id: msg
+        run: echo "MSG=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
 
-      - name: Create tag if message starts with v
-        if: startsWith(steps.get_message.outputs.message, 'v')
+      - name: Create tag if MSG starts with v
+        if: startsWith(steps.msg.outputs.MSG, 'v')
+        env:
+          PAT: ${{ secrets.PAT_TOKEN }}
         run: |
-          version=${{ steps.get_message.outputs.message }}
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag $version
-          git push origin $version
+          version=${{ steps.msg.outputs.MSG }}
+          git tag "$version"
+          git push https://x-access-token:${PAT}@github.com/${{ github.repository }} "$version"
