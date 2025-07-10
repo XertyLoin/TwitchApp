@@ -6,32 +6,7 @@ on:
       - 'v*.*.*'
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-launcher:
-    needs: create-release
+  build-and-release:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -44,21 +19,28 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.12.0' # Spécifiez une version exacte
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build Electron App
-        run: |
-          npm run build
+        run: npm run build
 
-      - name: Upload Release Assets
+      - name: List build artifacts
+        run: |
+          ls -la dist/ || dir dist\
+        shell: bash {0}
+
+      - name: Create GitHub release and upload assets
         uses: softprops/action-gh-release@v2
         with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
           files: |
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.dmg
+            ${{ matrix.os == 'windows-latest' && 'dist/*.exe' || '' }}
+            ${{ matrix.os == 'ubuntu-latest' && 'dist/*.AppImage' || '' }}
+            ${{ matrix.os == 'macos-latest' && 'dist/*.dmg' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
