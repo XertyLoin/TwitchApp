@@ -6,43 +6,63 @@
   "author": "Xerty",
   "license": "ISC",
   "scripts": {
-    "start": "set NODE_ENV=development&& electron .",
-    "build": "set NODE_ENV=production&& electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux"
+    "start": "cross-env NODE_ENV=development electron .",
+    "build": "cross-env NODE_ENV=production electron-builder",
+    "build:win": "cross-env NODE_ENV=production electron-builder --win",
+    "build:mac": "cross-env NODE_ENV=production electron-builder --mac",
+    "build:linux": "cross-env NODE_ENV=production electron-builder --linux"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.0.0"
+    "electron": "^31.3.2",
+    "electron-builder": "^25.0.5",
+    "cross-env": "^7.0.3"
   },
   "build": {
-    "appId": "com.openfront.app",
+    "appId": "com.openfront.twitchapp",
+    "productName": "TwitchApp",
+    "directories": {
+      "output": "dist"
+    },
     "asarUnpack": [
-      "mods/discord-rpc.js",
-      "node_modules/discord-rpc"
+      "mods/discord-rpc.js"
     ],
     "win": {
       "icon": "assets/icon.ico",
-      "target": "portable"
+      "target": [
+        "portable"
+      ]
     },
     "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": [
+        "AppImage"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
     },
     "extraResources": [
       {
         "from": "node_modules/discord-rpc",
         "to": "node_modules/discord-rpc"
       }
+    ],
+    "fileAssociations": [],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "XertyLoin",
+        "repo": "TwitchApp"
+      }
     ]
   },
   "dependencies": {
-    "discord-rpc": "^4.0.1",
-    "node-fetch": "^3.3.2"
+    "discord-rpc": "^4.0.1"
   }
 }

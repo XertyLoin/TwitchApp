@@ -14,12 +14,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
       - name: Get version
         id: get_version
         run: echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
         shell: bash
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -40,37 +38,37 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v1
-
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.x
-
       - name: Install Dependencies
         run: npm ci
         shell: bash
+      - name
 
-      - name: Build
+: Build
         env:
           GH_TOKEN: ${{ secrets.github_token }}
+          # Décommentez si vous avez des secrets pour macOS
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         run: npm run build
         shell: bash
-
+        timeout-minutes: 15
       - name: Lister les artefacts
         run: ls -la dist/
         shell: bash
-
       - name: Uploader les artefacts dans la release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: dist/twitchapp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'mac.zip') || (matrix.os == 'ubuntu-latest' && 'linux-x64.AppImage') || (matrix.os == 'windows-latest' && 'win.zip') }}
-          asset_name: twitchapp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'mac.zip') || (matrix.os == 'ubuntu-latest' && 'linux-x64.AppImage') || (matrix.os == 'windows-latest' && 'win.zip') }}
+          asset_path: dist/twitchapp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'arm64.dmg') || (matrix.os == 'ubuntu-latest' && 'AppImage') || (matrix.os == 'windows-latest' && 'portable.exe') }}
+          asset_name: twitchapp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'arm64.dmg') || (matrix.os == 'ubuntu-latest' && 'AppImage') || (matrix.os == 'windows-latest' && 'portable.exe') }}
           asset_content_type: application/octet-stream
