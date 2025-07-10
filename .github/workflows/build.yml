@@ -1,57 +1,43 @@
+# module du helios launcher
 name: Launcher Build
-
-permissions:
-  contents: write
-
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
 
 jobs:
-  create-tag-and-release:
+  create-release:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get version from package.json
-        id: get_version
-        run: |
-          version=$(jq -r .version package.json)
-          echo "version=$version" >> $GITHUB_OUTPUT
-
-      - name: Create Git tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.get_version.outputs.version }}
-          git push origin ${{ steps.get_version.outputs.version }}
-
-      - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ steps.get_version.outputs.version }}
-          name: release ${{ steps.get_version.outputs.version }}
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') }}
+      - name: Get version
+        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.version }}
+          release_name: release ${{ env.version }}
+          draft: false
+          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
 
   build-launcher:
-    needs: create-tag-and-release
+    needs: create-release
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Check out Git repository
+        uses: actions/checkout@v1
 
-      - name: Set up Node.js
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
@@ -59,24 +45,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: 3.x
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
         shell: bash
 
-      - name: Build Project
+      - name: Build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.github_token }}
         run: npm run build
         shell: bash
-
-      - name: Upload build artifacts to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
