@@ -9,6 +9,7 @@ const rpc = new RPC.Client({ transport: 'ipc' });
 let startTimestamp = new Date();
 let mainWindow = null;
 let pubDetected = false;
+let hasReloaded = false; // Drapeau pour éviter les rechargements multiples
 
 // Gestion des erreurs
 process.on('uncaughtException', (error) => console.error('[Main] Erreur non gérée:', error));
@@ -31,6 +32,7 @@ function getAppPath() {
       console.log("Mods de base copiés dans", modsPath);
     }
   }
+
   return appDataDir;
 }
 
@@ -60,10 +62,11 @@ function createWindow() {
   });
 
   win.setTitle("OpenFront App");
-  win.loadURL('https://www.twitch.tv');
+  win.loadURL('https://twitch.tv');
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://www.twitch.tv')) {
+    console.log('Tentative d’ouverture d’URL:', url);
+    if (url.includes('twitch.tv') || url.includes('passport.twitch.tv')) {
       return { action: 'allow' };
     }
     shell.openExternal(url);
@@ -71,10 +74,42 @@ function createWindow() {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('https://www.twitch.tv')) {
+    console.log('Navigation vers:', url);
+    if (!url.includes('twitch.tv') && !url.includes('passport.twitch.tv')) {
       event.preventDefault();
       shell.openExternal(url);
     }
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    // Vérifier les cookies pour confirmer l'état de connexion
+    session.defaultSession.cookies.get({ url: 'https://twitch.tv' })
+      .then(cookies => {
+        const isLoggedIn = cookies.some(cookie => cookie.name === 'auth-token');
+        console.log('État de connexion:', isLoggedIn ? 'Connecté' : 'Non connecté');
+        if (isLoggedIn && !hasReloaded) {
+          console.log('Utilisateur connecté, rechargement unique de la page');
+          hasReloaded = true; // Empêche les rechargements multiples
+          win.loadURL('https://twitch.tv'); // Rechargement explicite
+        } else if (!isLoggedIn) {
+          hasReloaded = false; // Réinitialiser pour permettre un futur rechargement
+        }
+      })
+      .catch(err => console.error('Erreur lors de la vérification des cookies:', err));
+
+    // Injecter le script pour bloquer les pubs
+    win.webContents.executeJavaScript(`
+      const origFetch = window.fetch;
+      window.fetch = function(url, options) {
+        if (typeof url === 'string' && url.includes('/gql')) {
+          if (options && options.body && options.body.includes('PlaybackAccessToken_Ads')) {
+            console.log('🔁 PlaybackAccessToken_Ads bloqué');
+            return Promise.reject('Ad request blocked');
+          }
+        }
+        return origFetch.apply(this, arguments);
+      };
+    `).catch(err => console.error("Erreur d'injection JS:", err));
   });
 
   ipcMain.on('open-devtools', () => {
@@ -122,7 +157,12 @@ function updateDiscordPresence(url) {
       largeImageKey: 'twitch',
       largeImageText: 'Twitch',
       instance: false,
-      buttons: [{ label: 'Regarder le stream', url: url }]
+      buttons: [
+        {
+          label: 'Regarder le stream',
+          url: url
+        }
+      ]
     });
   } else {
     console.log('🔘 Présence Discord : Menu Twitch');
@@ -138,19 +178,15 @@ function updateDiscordPresence(url) {
 }
 
 app.whenReady().then(() => {
+  // Assurer la persistance des cookies
+  session.defaultSession.setPermissionRequestHandler((weblamda, permission, callback) => {
+    callback(true); // Accepter toutes les permissions (par exemple, pour l'authentification)
+  });
+
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     const url = details.url;
     const adDomains = [
-      'doubleclick.net',
-      'googlesyndication.com',
-      'ads.twitch.tv',
-      'pubads.g.doubleclick.net',
-      'securepubads.g.doubleclick.net',
-      'tpc.googlesyndication.com',
-      'video-ad-status.twitch.tv',
-      'amazon-adsystem.com',
-      'scorecardresearch.com',
-      'adnxs.com'
+      'doubleclick.net', 'googlesyndication.com', 'ads.twitch.tv'
     ];
 
     if (adDomains.some(domain => url.includes(domain))) {
@@ -194,4 +230,3 @@ app.on('activate', () => {
     mainWindow = createWindow();
   }
 });
-//salut !
