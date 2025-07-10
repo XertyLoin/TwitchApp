@@ -1,0 +1,6 @@
+- name: Check GITHUB_TOKEN permissions
+  run: |
+    echo "Permissions du GITHUB_TOKEN :"
+    curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+    https://api.github.com/repos/${{ github.repository }}/actions/permissions \
+    | jq .
