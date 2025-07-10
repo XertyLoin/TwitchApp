@@ -5,11 +5,11 @@ permissions:
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - master
 
 jobs:
-  create-release:
+  create-tag-and-release:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -17,10 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Get version
+      - name: Get version from package.json
         id: get_version
         run: |
-          echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+          version=$(jq -r .version package.json)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.get_version.outputs.version }}
+          git push origin ${{ steps.get_version.outputs.version }}
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
@@ -33,7 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-launcher:
-    needs: create-release
+    needs: create-tag-and-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -53,7 +61,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
         shell: bash
 
@@ -63,7 +71,7 @@ jobs:
         run: npm run build
         shell: bash
 
-      - name: Upload Artifacts to GitHub Release
+      - name: Upload build artifacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
