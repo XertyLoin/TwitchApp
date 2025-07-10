@@ -2,11 +2,58 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main # Déclenche sur un push vers la branche main
 
 jobs:
+  create-tag-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Récupère l'historique complet pour vérifier les tags
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.9.0' # Version spécifique pour la reproductibilité
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get package.json version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          TAG=${{ steps.get_version.outputs.VERSION }}
+          if git tag | grep -q "^$TAG$"; then
+            echo "Tag $TAG already exists, skipping tag creation."
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist, proceeding with tag creation."
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        run: |
+          TAG=${{ steps.get_version.outputs.VERSION }}
+          git tag $TAG
+          git push origin $TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-and-release:
+    needs: create-tag-and-release
+    if: needs.create-tag-and-release.outputs.TAG_EXISTS != 'true' # S'exécute seulement si un nouveau tag a été créé
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -19,7 +66,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0' # Spécifiez une version exacte
+          node-version: '20.9.0'
 
       - name: Install dependencies
         run: npm ci
@@ -35,7 +82,7 @@ jobs:
       - name: Create GitHub release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ github.ref_name }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
           draft: false
           prerelease: false
           files: |
