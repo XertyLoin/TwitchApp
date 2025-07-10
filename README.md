@@ -38,6 +38,20 @@ npm start
 npm run build
 ```
 
+## ⚠ Windows SmartScreen Notice
+
+> ⚠ **If you're using a release version from GitHub or any distribution:**
+
+Because OpenFrontApp is a new and unsigned application, **Windows may display a security warning** when launching the `.exe` for the first time.
+
+This is normal and expected.
+
+To proceed:
+
+1. Click **"More info"**
+2. Then click **"Run anyway"**
+
+Once the app gains reputation or is digitally signed, this warning will no longer appear.
 
 
 ## 🛠️ Technologies Used
