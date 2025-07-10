@@ -1,29 +1,23 @@
-name: Create Tag from Commit
+name: Auto Git Tag
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout with PAT
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
 
-      - name: Get commit message
-        id: msg
-        run: echo "MSG=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
-
-      - name: Create tag if MSG starts with v
-        if: startsWith(steps.msg.outputs.MSG, 'v')
-        env:
-          PAT: ${{ secrets.PAT_TOKEN }}
-        run: |
-          version=${{ steps.msg.outputs.MSG }}
-          git tag "$version"
-          git push https://x-access-token:${PAT}@github.com/${{ github.repository }} "$version"
+      - name: Auto Git Tag
+        uses: biohackerellie/auto-git-tag@v1.1.5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: main
+          dry_run: false
