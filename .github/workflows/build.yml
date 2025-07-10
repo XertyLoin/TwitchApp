@@ -35,13 +35,15 @@ jobs:
     strategy:
       matrix:
         os: [macos-14, ubuntu-latest, windows-latest]
+    env:
+      VERSION: ${{ needs.create-release.outputs.version }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v1
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -52,12 +54,13 @@ jobs:
       - name: Build
         env:
           GH_TOKEN: ${{ secrets.github_token }}
-          # Décommentez pour la notarisation macOS si vous avez des secrets
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         run: npm run build
         shell: bash
         timeout-minutes: 20
+      - name: Zipper le répertoire portable (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path dist/TwitchApp-win-portable -DestinationPath dist/TwitchApp-${{ env.VERSION }}-win-portable.zip
+        shell: pwsh
       - name: Lister les artefacts
         run: ls -la dist/
         shell: bash
@@ -67,6 +70,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github_token }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: dist/TwitchApp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'arm64.dmg') || (matrix.os == 'ubuntu-latest' && 'AppImage') || (matrix.os == 'windows-latest' && 'portable.exe') }}
-          asset_name: TwitchApp-${{ needs.create-release.outputs.version }}-${{ (matrix.os == 'macos-14' && 'arm64.dmg') || (matrix.os == 'ubuntu-latest' && 'AppImage') || (matrix.os == 'windows-latest' && 'portable.exe') }}
+          asset_path: ${{ matrix.os == 'macos-14' && format('dist/TwitchApp-{0}-mac.dmg', env.VERSION) || matrix.os == 'ubuntu-latest' && format('dist/TwitchApp-{0}.AppImage', env.VERSION) || matrix.os == 'windows-latest' && format('dist/TwitchApp-{0}-win-portable.zip', env.VERSION) }}
+          asset_name: ${{ matrix.os == 'macos-14' && format('TwitchApp-{0}-mac.dmg', env.VERSION) || matrix.os == 'ubuntu-latest' && format('TwitchApp-{0}.AppImage', env.VERSION) || matrix.os == 'windows-latest' && format('TwitchApp-{0}-win-portable.zip', env.VERSION) }}
           asset_content_type: application/octet-stream

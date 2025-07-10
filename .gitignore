@@ -1,0 +1,22 @@
+# Dossier node_modules
+node_modules/
+
+# Fichiers générés par electron-builder
+dist/
+out/
+
+# Fichiers de build temporaires
+*.log
+*.lock
+
+# Fichiers de configuration d'environnement
+.env
+.env.*
+
+# Dossiers de cache
+.cache/
+.npm/
+
+# Fichiers spécifiques à l'OS
+.DS_Store
+Thumbs.db
