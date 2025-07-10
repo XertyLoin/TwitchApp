@@ -3,6 +3,7 @@ name: Launcher Build
 
 permissions:
   contents: write
+
 on:
   push:
     branches: [ master ]
@@ -38,7 +39,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Set up Node
         uses: actions/setup-node@v3
@@ -56,6 +57,16 @@ jobs:
 
       - name: Build
         env:
-          GH_TOKEN: ${{ secrets.github_token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
         shell: bash
+
+      - name: Upload build artifacts to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

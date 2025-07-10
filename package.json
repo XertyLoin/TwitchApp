@@ -49,13 +49,6 @@
           "**/*"
         ]
       },
-      {
-        "from": "active-mods.json",
-        "to": "."
-      }
-    ],
-    "extraFiles": [
-      "active-mods.json"
     ]
   },
   "dependencies": {
